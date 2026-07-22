@@ -1,6 +1,8 @@
 import React, { lazy, Suspense, useState } from 'react';
 import { useTheme } from './hooks/useTheme';
+import { LicenseProvider, useLicense } from './licensing/LicenseProvider';
 import { useClipboardHistory } from './hooks/useClipboardHistory';
+import { AnimatedBackground } from './components/AnimatedBackground';
 
 const HomePage = lazy(() => import('./pages/HomePage').then(m => ({ default: m.HomePage })));
 const HistoryPage = lazy(() => import('./pages/HistoryPage').then(m => ({ default: m.HistoryPage })));
@@ -181,8 +183,14 @@ const navItems: { id: Page; label: string; icon: React.ReactNode }[] = [
 ];
 
 export default function App() {
+  return <LicenseProvider productKey="ClipVault"><AppInner /></LicenseProvider>;
+}
+
+function AppInner() {
   const [currentPage, setCurrentPage] = useState<Page>('home');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { theme, toggleTheme } = useTheme();
+  const { isPro, loading: proLoading, setShowProModal } = useLicense();
   const clipboard = useClipboardHistory();
 
   const activeStyle: React.CSSProperties = {
@@ -238,11 +246,41 @@ export default function App() {
   };
 
   return (
-    <div style={sidebarStyles.app}>
-      <aside style={sidebarStyles.sidebar}>
+    <>
+      <AnimatedBackground />
+      <button className="mobile-hamburger" onClick={() => setMobileMenuOpen(!mobileMenuOpen)} aria-label="Toggle menu"
+        style={{ position: 'fixed', top: '0.75rem', left: '0.75rem', zIndex: 110, display: 'none', alignItems: 'center', justifyContent: 'center', width: '40px', height: '40px', borderRadius: 'var(--radius-md)', background: 'var(--color-surface)', border: '1px solid var(--color-border)', color: 'var(--color-text)', cursor: 'pointer' }}>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          {mobileMenuOpen ? (
+            <><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></>
+          ) : (
+            <><line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" /></>
+          )}
+        </svg>
+      </button>
+      <div style={{ ...sidebarStyles.app, position: 'relative', zIndex: 1 }}>
+        {mobileMenuOpen && (
+          <div onClick={() => setMobileMenuOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 90 }}
+            className="mobile-overlay" />
+        )}
+        <aside style={sidebarStyles.sidebar} className={'sidebar-nav' + (mobileMenuOpen ? ' open' : '')}>
         <div style={sidebarStyles.logo}>
           <span style={sidebarStyles.logoIcon}>🗄️</span>
           ClipVault
+          {!proLoading && (
+            <span style={{
+              fontSize: '0.625rem',
+              fontWeight: 600,
+              padding: '0.125rem 0.375rem',
+              borderRadius: 'var(--radius-sm)',
+              background: isPro ? 'var(--color-success-light)' : 'var(--color-warning-light)',
+              color: isPro ? 'var(--color-success)' : 'var(--color-warning)',
+              textTransform: 'uppercase',
+              letterSpacing: '0.04em',
+            }}>
+              {isPro ? 'Pro' : 'Free'}
+            </span>
+          )}
         </div>
 
         <nav>
@@ -250,7 +288,7 @@ export default function App() {
             <button
               key={item.id}
               style={currentPage === item.id ? activeStyle : sidebarStyles.navItem}
-              onClick={() => setCurrentPage(item.id)}
+              onClick={() => { setCurrentPage(item.id); setMobileMenuOpen(false); }}
             >
               <span style={sidebarStyles.navIcon}>{item.icon}</span>
               {item.label}
@@ -259,6 +297,31 @@ export default function App() {
         </nav>
 
         <div style={sidebarStyles.spacer} />
+
+        {!isPro && (
+          <button
+            onClick={() => setShowProModal(true)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              padding: '9px 10px',
+              borderRadius: 'var(--radius-md)',
+              border: 'none',
+              background: 'var(--color-primary)',
+              color: '#fff',
+              fontWeight: 600,
+              fontSize: '0.875rem',
+              cursor: 'pointer',
+              marginBottom: '8px',
+              width: '100%',
+            }}
+          >
+            <span>⭐</span>
+            Upgrade to Pro
+          </button>
+        )}
 
         <button style={sidebarStyles.themeBtn} onClick={toggleTheme}>
           <span style={sidebarStyles.navIcon}>
@@ -274,5 +337,6 @@ export default function App() {
         </Suspense>
       </main>
     </div>
+    </>
   );
 }
