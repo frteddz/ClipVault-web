@@ -2,6 +2,8 @@
 
 > Clipboard history manager — never lose a copied item again.
 
+This repository contains only the built distribution files. The source code is not publicly available.
+
 ## Features
 
 - Automatically records every item you copy
